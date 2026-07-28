@@ -1,0 +1,138 @@
+# HTTP Request Processor
+
+Spring Boot + Spring Cloud Stream ベースの HTTP リクエストプロセッサー。メッセージチャネルからメッセージを受信し、SpEL 式で動的に HTTP リクエストを構築し、外部 API を呼び出し、レスポンスをメッセージチャネルに出力する。
+
+## 技術スタック
+
+| コンポーネント | バージョン |
+|---|---|
+| Java | 17 |
+| Spring Boot | 3.5.8 |
+| Spring Cloud | 2025.0.3 |
+| Spring Cloud Stream | 4.x (Kafka Binder) |
+| WebClient (WebFlux) | — |
+| Caffeine Cache | — |
+
+## クイックスタート
+
+### 設定
+
+```yaml
+spring:
+  cloud:
+    stream:
+      function:
+        definition: httpRequestFunction
+```
+
+### 最小構成
+
+`url-expression` が必須。その他のプロパティはデフォルト値を持つ。
+
+```properties
+http.request.cache.url-expression='"https://api.example.com/data"'
+```
+
+### メッセージヘッダーによる動的リクエスト
+
+```properties
+http.request.cache.url-expression=headers['url']
+http.request.cache.http-method-expression=headers['method']
+http.request.cache.body-expression=headers['body']
+http.request.cache.reply-expression=#root
+```
+
+メッセージ送信例：
+
+```java
+Message<?> message = MessageBuilder.withPayload("")
+        .setHeader("url", "https://api.example.com/data")
+        .setHeader("method", "POST")
+        .setHeader("body", "{\"key\":\"value\"}")
+        .build();
+```
+
+## 設定プロパティ
+
+全プロパティのプレフィックスは `http.request.cache`。
+
+### HTTP リクエスト設定
+
+| プロパティ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `url-expression` | SpEL (必須) | — | HTTP リクエスト URL |
+| `http-method-expression` | SpEL | `GET` | HTTP メソッド |
+| `body-expression` | SpEL | — | リクエストボディ（null の場合はメッセージ payload を使用） |
+| `headers-expression` | SpEL | — | リクエストヘッダー。`Map<String, Object>` を返す |
+| `reply-expression` | SpEL | `response.body` | レスポンス処理式。root object は `ReplySource` |
+| `expected-response-type` | Class | `String` | レスポンスボディのデシリアライズ型 |
+| `timeout` | long | `30000` | リクエストタイムアウト（ミリ秒） |
+| `throw-http-status-code-exception` | boolean | `true` | 4xx/5xx レスポンス時に例外をスローするか |
+
+### キャッシュ設定
+
+| プロパティ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `enabled` | boolean | `false` | キャッシュの有効/無効 |
+| `ttl` | Duration | `6h` | キャッシュ有効期限 |
+
+キャッシュキーは `body-expression` の解決結果。同じボディかつキャッシュ期限内の場合、HTTP リクエストをスキップしキャッシュ値を返す。
+
+> **注意**：Caffeine は null 値をキャッシュしない。HTTP レスポンスが null の場合、キャッシュは機能せず、次回同じキーでもキャッシュミスになる。
+
+### キャッシュ有効化例
+
+```properties
+http.request.cache.enabled=true
+http.request.cache.url-expression='"https://api.example.com/data"'
+http.request.cache.http-method-expression='POST'
+```
+
+## SpEL 式
+
+すべての式で Spring Integration 組み込みの SpEL 関数が使用可能：
+
+- `#jsonPath(payload, '$.path')` — JSON Path 抽出
+- `headers['key']` — メッセージヘッダー参照
+- `payload` — メッセージボディ
+
+### ReplySource
+
+`reply-expression` の root object は `ReplySource`。以下の 3 つのフィールドを持つ：
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `headers` | MessageHeaders | 元の入力メッセージヘッダー |
+| `payload` | Object | 解決済みリクエストボディ |
+| `response` | ResponseEntity | HTTP レスポンスエンティティ |
+
+**使用例：**
+
+```properties
+# レスポンスボディを返す（デフォルト）
+http.request.cache.reply-expression=response.body
+
+# ReplySource 全体を JSON として返す（headers, payload, response を含む）
+http.request.cache.reply-expression=#root
+
+# レスポンス JSON から特定フィールドを抽出
+http.request.cache.reply-expression=#jsonPath(response.body, '$.data.items')
+```
+
+## テスト
+
+`spring-cloud-stream-test-binder` と `MockWebServer` による統合テスト。実際の Kafka 環境は不要。
+
+```bash
+mvn clean test
+```
+
+## ビルドと実行
+
+```bash
+# ビルド
+mvn clean package
+
+# 実行
+mvn spring-boot:run
+```
