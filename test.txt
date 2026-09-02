@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: drupal-sites
+  namespace: drupal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# 2. Deployment:官方 Drupal 镜像(自带 Apache,监听 80)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal
+  namespace: drupal
+  labels:
+    app: drupal
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate        # 单副本 + RWO 盘,避免滚动更新时卷抢占卡住
+  selector:
+    matchLabels:
+      app: drupal
+  template:
+    metadata:
+      labels:
+        app: drupal
+    spec:
+      # www-data(Apache 用户)的 GID,保证能写挂载的卷
+      securityContext:
+        fsGroup: 33
+      initContainers:
+        # PVC 挂到 sites/default 会遮住镜像自带的默认文件(default.settings.php),
+        # 这里仅首次把镜像里的默认内容"种"进 PVC
+        - name: seed-sites-default
+          image: drupal:10-apache
+          command:
+            - /bin/sh
+            - -c
+            - |
+              if [ ! -f /data/settings.php ]; then
+                cp -a /var/www/html/sites/default/. /data/ 2>/dev/null || true
+              fi
+              chown -R 33:33 /data
+              chmod -R 775 /data
+          volumeMounts:
+            - name: sites
+              mountPath: /data
+      containers:
+        - name: drupal
+          image: drupal:10-apache
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: sites
+              mountPath: /var/www/html/sites/default
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: drupal-sites
+
+---
+# 3. Service:ClusterIP,由 Traefik Ingress 转发进来
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal
+  namespace: drupal
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector:
+    app: drupal
+
+---
+# 4. Ingress:Traefik 入口 + cert-manager 自动签发证书
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: drupal
+  namespace: drupal
+  annotations:
+    cert-manager.io/cluster-issuer: drupal-letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - 
+      secretName: drupal-tls
+  rules:
+    - host:
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: drupal
+                port:
+                  number: 80
