@@ -125,4 +125,17 @@ cd /opt/drupal/web
 ../vendor/bin/drush updb -y           # 执行 core + 模块更新钩子
 ../vendor/bin/drush cr
 
+14
+# 1. recipe_locale 里和这张表/hash 相关的定义
+grep -rn "locale_file\|file_hash\|locale_file_hash" \
+  /opt/drupal/web/modules/contrib/recipe_locale \
+  --include="*.install" --include="*.schema.yml" --include="*.php" | head -30
+
+# 2. 待执行的数据库更新清单
+cd /opt/drupal/web
+../vendor/bin/drush updb --status
+
+../vendor/bin/drush updb -y
+../vendor/bin/drush cr
+
 
