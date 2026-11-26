@@ -23,3 +23,10 @@ cat /opt/drupal/web/autoload.php
 ls -l /opt/drupal/web/autoload.php
 grep -n autoload /opt/drupal/web/index.php
 ls -l /opt/drupal/web/ | head -30
+
+
+7
+kubectl get deploy -n drupal-cms -o yaml | grep -nE "image:|mountPath:|initContainers|volumeMounts:|volumes:|persistentVolumeClaim"
+```
+cat /opt/drupal/web/autoload_runtime.php
+```
