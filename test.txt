@@ -148,3 +148,11 @@ cd /opt/drupal/web
 ../vendor/bin/drush sql-cli < /tmp/db-backup-xxxx.sql
 
 
+16
+cd /opt/drupal/web
+../vendor/bin/drush state:set system.maintenance_mode 0
+../vendor/bin/drush state:get system.maintenance_mode     # 立即读，是不是 0
+../vendor/bin/drush cr
+../vendor/bin/drush state:get system.maintenance_mode     # 清缓存后是不是 0
+
+
