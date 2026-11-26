@@ -104,3 +104,14 @@ cd /opt/drupal/web
 
 ../vendor/bin/drush cim -y
 
+
+12
+grep -rl "locale_file_hash" /opt/drupal/web /opt/drupal/vendor 2>/dev/null
+
+# 找 locale_file 表是哪个模块定义的
+grep -rl "locale_file" /opt/drupal/web --include="*.install" --include="*.schema.yml"
+
+cd /opt/drupal/web
+../vendor/bin/drush sqlq "SHOW COLUMNS FROM locale_file"
+
+
