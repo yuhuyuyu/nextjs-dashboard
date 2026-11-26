@@ -50,3 +50,20 @@ chown -R www-data:www-data web/modules/contrib/autosave_form
 rm -rf web/sites/default/files/php/* web/sites/default/files/cache/*
 # 退出后：kubectl rollout restart deploy/drupal-cms -n drupal-cms
 
+10
+cd /opt/drupal
+
+# 先列出当前锁定的 drupal contrib 包
+composer show --locked | awk '/^drupal\//{print $1}'
+
+# 整体重装（把上面列出来的包名传给 reinstall）
+composer reinstall $(composer show --locked | awk '/^drupal\//{print $1}') 2>&1 | tail -40
+
+
+chown -R www-data:www-data web/modules web/sites
+composer dump-autoload -o
+rm -rf web/sites/default/files/php/* web/sites/default/files/cache/*
+```
+kubectl rollout restart deploy/drupal-cms -n drupal-cms
+```
+
