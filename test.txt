@@ -27,6 +27,9 @@ ls -l /opt/drupal/web/ | head -30
 
 7
 kubectl get deploy -n drupal-cms -o yaml | grep -nE "image:|mountPath:|initContainers|volumeMounts:|volumes:|persistentVolumeClaim"
-```
 cat /opt/drupal/web/autoload_runtime.php
-```
+
+
+8
+grep -A3 '"drupal/autosave_form"' /opt/drupal/composer.lock | grep version
+grep -nE "CallableResolver|callable_resolver|parent::__construct" /opt/drupal/web/modules/contrib/autosave_form/src/Form/AutosaveFormBuilder.php
