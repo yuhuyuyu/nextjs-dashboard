@@ -16,3 +16,10 @@ ls -R /opt/drupal/web/sites/default/files/php 2>/dev/null | head -30
 
 5
 cd /opt/drupal/web && ../vendor/bin/drush cr 2>&1 | tail -20
+
+
+6
+cat /opt/drupal/web/autoload.php
+ls -l /opt/drupal/web/autoload.php
+grep -n autoload /opt/drupal/web/index.php
+ls -l /opt/drupal/web/ | head -30
