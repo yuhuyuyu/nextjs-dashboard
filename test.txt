@@ -115,3 +115,14 @@ cd /opt/drupal/web
 ../vendor/bin/drush sqlq "SHOW COLUMNS FROM locale_file"
 
 
+13
+apt-get update && apt-get install -y mariadb-client
+cd /opt/drupal/web
+../vendor/bin/drush sqlq "SHOW COLUMNS FROM locale_file"
+grep -rl "locale_file" /opt/drupal/web/profiles /opt/drupal/web/modules/contrib 2>/dev/null
+cd /opt/drupal/web
+../vendor/bin/drush updb --status     # 看待执行更新
+../vendor/bin/drush updb -y           # 执行 core + 模块更新钩子
+../vendor/bin/drush cr
+
+
