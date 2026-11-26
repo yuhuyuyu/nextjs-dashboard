@@ -83,3 +83,24 @@ args:
     mkdir -p /mnt/web/sites/default/files
 
     chown -R www-data:www-data /mnt/ -R
+
+
+11
+grep -rl "locale_file_hash" /opt/drupal/web/modules /opt/drupal/web/core/modules 2>/dev/null
+
+cd /opt/drupal/web
+
+# 1. 先备份数据库
+../vendor/bin/drush sql-dump > /tmp/db-backup-$(date +%Y%m%d).sql
+
+# 2. 看有哪些待执行的更新
+../vendor/bin/drush updb --status
+
+# 3. 执行所有待跑的数据库更新（core + 模块）
+../vendor/bin/drush updb -y
+
+# 4. 清缓存
+../vendor/bin/drush cr
+
+../vendor/bin/drush cim -y
+
