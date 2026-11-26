@@ -139,3 +139,12 @@ cd /opt/drupal/web
 ../vendor/bin/drush cr
 
 
+15
+cd /opt/drupal/web
+../vendor/bin/drush sql-dump --result-file=/tmp/db-backup-$(date +%Y%m%d).sql
+
+恢复
+../vendor/bin/drush sql-drop
+../vendor/bin/drush sql-cli < /tmp/db-backup-xxxx.sql
+
+
