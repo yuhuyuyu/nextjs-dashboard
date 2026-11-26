@@ -33,3 +33,20 @@ cat /opt/drupal/web/autoload_runtime.php
 8
 grep -A3 '"drupal/autosave_form"' /opt/drupal/composer.lock | grep version
 grep -nE "CallableResolver|callable_resolver|parent::__construct" /opt/drupal/web/modules/contrib/autosave_form/src/Form/AutosaveFormBuilder.php
+
+9
+composer show drupal/autosave_form --path
+ls -ld /opt/drupal/web/modules/contrib/autosave_form
+readlink -f /opt/drupal/web/modules/contrib/autosave_form
+find /opt/drupal -path '*autosave_form*' -name 'AutosaveFormBuilder.php'
+
+cd /opt/drupal
+composer reinstall drupal/autosave_form 2>&1 | tail -20
+
+grep -nE "CallableResolver|callable_resolver|parent::__construct" \
+  /opt/drupal/web/modules/contrib/autosave_form/src/Form/AutosaveFormBuilder.php
+
+chown -R www-data:www-data web/modules/contrib/autosave_form
+rm -rf web/sites/default/files/php/* web/sites/default/files/cache/*
+# 退出后：kubectl rollout restart deploy/drupal-cms -n drupal-cms
+
