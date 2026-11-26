@@ -67,3 +67,19 @@ rm -rf web/sites/default/files/php/* web/sites/default/files/cache/*
 kubectl rollout restart deploy/drupal-cms -n drupal-cms
 ```
 
+
+
+args:
+  - |
+    set -e
+
+    # 代码：每次启动用镜像内的模块/主题覆盖 PVC（镜像为权威）
+    mkdir -p /mnt/web/modules /mnt/web/themes
+    rm -rf /mnt/web/modules/* /mnt/web/themes/*
+    cp -r /opt/drupal/web/modules/. /mnt/web/modules/
+    cp -r /opt/drupal/web/themes/.  /mnt/web/themes/
+
+    # 用户数据：只保证目录存在，不覆盖 settings.php 和已上传文件
+    mkdir -p /mnt/web/sites/default/files
+
+    chown -R www-data:www-data /mnt/ -R
